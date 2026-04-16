@@ -1,0 +1,40 @@
+{
+  "fund_name": "Example SEA Ventures",
+  "scoring": {
+    "anchors": [0, 25, 50, 75, 100],
+    "weights": {
+      "sector_fit": 0.40,
+      "geography_fit": 0.25,
+      "stage_fit": 0.10,
+      "arr_traction_fit": 0.25
+    }
+  },
+  "sector": {
+    "target": ["B2B SaaS", "Enterprise Software", "Marketplaces", "Deep Tech", "Web3"],
+    "exclude": ["Consumer", "D2C", "E-commerce", "Hardware-first", "Gaming"]
+  },
+  "geography": {
+    "target": ["Southeast Asia", "Singapore", "Indonesia", "Vietnam", "Malaysia", "Thailand", "Philippines"]
+  },
+  "stage": {
+    "target": ["Pre-Seed", "Seed", "Series A", "Series B"]
+  },
+  "arr_target_usd": 250000,
+  "deal_breakers": [
+    "pre_product_pre_revenue",
+    "hardware_business_model",
+    "d2c_consumer_ecommerce"
+  ],
+  "bonus_criteria": [
+    "renowned_vc_backers",
+    "clear_path_to_profitability",
+    "repeat_founder"
+  ],
+  "renowned_vcs": [
+    "Sequoia", "a16z", "Andreessen Horowitz", "Accel", "Y Combinator",
+    "Benchmark", "Bessemer", "GV", "Index Ventures",
+    "Temasek", "East Ventures", "Matrix Partners", "500 Global",
+    "Antler", "Alpha JWC", "Monk's Hill Ventures"
+  ],
+  "thesis_text": "We back exceptional founders in Southeast Asia building defensible B2B software products. We focus on companies with early revenue traction (>$250K ARR) that are solving real enterprise pain points with strong unit economics. Our sweet spot is Seed to Series A, with check sizes of $500K–$3M. We strongly prefer founding teams with deep domain expertise and prior startup experience."
+}

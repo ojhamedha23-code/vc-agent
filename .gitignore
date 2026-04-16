@@ -1,0 +1,30 @@
+# ── Secrets ───────────────────────────────────────────
+.env
+.env.*
+*.env
+!.env.example
+
+# ── Python ────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+.pytest_cache/
+
+# ── Output / database ─────────────────────────────────
+output/
+*.db
+*.sqlite3
+
+# ── Node / Next.js ────────────────────────────────────
+frontend/node_modules/
+frontend/.next/
+frontend/.vercel/
+
+# ── macOS ─────────────────────────────────────────────
+.DS_Store
+.DS_Store?

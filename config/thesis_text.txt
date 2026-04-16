@@ -1,0 +1,131 @@
+=== Sheet1 ===
+  |  Design Principle for scoring --> Design uses discrete anchor (0,25,50,75,100) to improve consistency and interpretability
+  |  Example: 
+0 = clearly outside thesis
+25 = adjacent, but still mostly outside
+50 = partially relevant
+75 = clearly within thesis, with small caveat
+100 = perfect thesis match
+  |  Decision criteria  |    |    |    |    |  
+  |  1) Completely reject/ skip if low score AND dealbreaker  |    |    |    |    |  
+  |  2) Flag if Dealbreaker BUT "Thesis Fit Score"** is high -> VC wants to keep this in their database for future opportunities?  |    |    |    |    |  
+  |  3) Flag for review if NOT dealbreaker and above certain score threshold, (if needed) prioritized based on "Thesis Fit Score"** + Bonus Points  |    |    |    |    |  
+  |  4) Side note: What if any MISSING DATA required for scoring? --> will be handled in "Confidence Level"  |    |    |    |    |  
+  |  Output as follows, in this exact order  |    |    |    |    |  
+  |  1) Thesis Fit Score + Confidence Level -- the score contains overall score (average of each of thesis area) + score from each core thesis area (0/25/50/75/100)  |    |    |    |    |  
+  |  2) Deal Breaker status  |    |    |    |    |  
+  |  3) Bonus Points  |    |    |    |    |  
+  |  4) Summary of Statups & Potential Risks  |    |    |    |    |  
+  |  5) Next step (conditional on point 1 & 2 above)  |    |    |    |    |  
+  |  ---- see below for detail of each output ------  |    |    |    |    |  
+  |  A) "Thesis Fit Score" + Confidence Level  |    |    |    |    |  
+  |  A.1 Core Scoring Model  |    |    |    |    |  
+  |    |  0.0  |  0.25  |  0.5  |  0.75  |  1.0
+  |  Core Thesis  |    |    |    |    |  
+  |  Sector fit  |  Consumer, D2C, e-commerce, anything "hardware" first  |  “B2B” claim but majority consumer-like economics or unclear ICP
+
+Concrete signals:
+- Pricing is per-individual-user at consumer price points (e.g. $9.99/month)
+- They acquire customers through app stores, social media ads, influencers
+- Their "businesses" are actually freelancers or sole traders
+- No enterprise procurement, no procurement cycles mentioned
+- Revenue is transactional/usage-based with no contracts
+- No sign of the software/ system being embedded to an enterprise's workflow  |  B2B software but "peripheral" only / unclear position
+
+Signals to capture: 
+- The product is a feature, not a platform (e.g. a Slack plugin)
+- The category exists but doesn't map cleanly to SaaS/Enterprise/Marketplace/Deep tech/Web3
+- No moat , no articulation why a customer would switch from incumbent  |  B2B software clearly, fits one thesis sub-sector, but founding team's background suggests consumer DNA/ irrelevant background despite B2B positioning (we just question whether founder/ co-foudning team can execute cleanly in this sector)  |  1. B2B software
+2. Matched subthesis cleanly (SaaS, Enterprise, Marketplaces, Deep tech, Web3)
+  |  Geography fit  |  - HQ, customers, and GTM are all outside target geographies
+- no credible evidence of expansion to target geos  |  - HQ outside target geos
+- no current traction in target geos
+- only vague or early stated intention to expand there
+
+Example: We’re based in Brazil and may expand to SEA later.  |  - mixed fit
+- either target-geo customers exist but are limited, or target geo is one of several GTM priorities
+- still not clearly centered on target markets
+
+Example: HQ in France, some pilot customers in Singapore, but main traction is still in LATAM  |  - substantial target-geo relevance already exists
+- maybe HQ is outside target geography, but customers / GTM / hiring / sales focus is clearly in target markets
+
+Example: HQ in Brazil, but most commercial focus is on UK + Germany, or HQ in US but already selling in SEA with named customers  |  - HQ and primary traction/GTM are strongly in target geographies
+- deck clearly shows the company is built for those geos
+
+Example: Singapore-based B2B SaaS startup selling across SEA
+  |  Stage fit  |  Series C+ or bootstrapped lifestyle w/o venture intent  |    |  Ambiguous, can't determine stage
+
+e.g. No round mentioned even though founder mentions $ funding needed  |    |  Any of: Pre-seed, Seed, Series A, Series B - stated clearly
+  |  Financial traction fit - ARR  |  Pre-revenue OR “revenue” only in pilots with no recurring proof  |  < 250k ARR  |  - ARR >= $250k
+- but no credible evidence yet that $1M ARR in 12 months is achievable  |  - ARR >= $250k
+- there is moderate evidence supporting path to $1M ARR in 12 months
+
+example of credible evidence: 
+- clear recent growth trend (that will make ARR = $1M in 12 months if growth trend continues) 
+- paying customers increasing
+- reasonable pipeline / discussion with leads (but no agreement signed) 
+- decent retention / repeatability signals  |  >= 250k ARR with STRONG PROOF that it can be $1Mn in a year
+
+Examples of strong evidence:
+- strong historical MoM / QoQ growth
+- clear sales efficiency or conversion funnel
+- signed contracts / pipeline coverage
+- strong retention / low churn
+- expansion revenue or repeatability already visible
+  |  A.2 Confidence Level for Thesis Fit Score --> give scoring + flag what's missing from Core Thesis
+  |  Missing data points  |  Completeness/ Confidence Level
+  |  0 - 1  |  High
+  |  2 - 3  |  Medium
+  |  4+  |  Low
+  |  A.3 Action  |  
+  |  Thesis Fit  |  Deal Breaker  |  Action
+  |  >= 75%  |  Yes  |  Archive for future opportunities
+  |  < 75%  |  Yes  |  PASS
+  |  >= 50%  |  No  |  Review
+  |  < 50%  |  No  |  PASS
+  |  NOTE: FINAL OUTPUT TO FLAG "ACTION" + SCORE (AND BREAKDOWN PER THESIS AREA)  |  
+  |  A.3 Weighted Avg for Core Thesis & Rationales -> but maybe different fund has different prioritization  |  
+  |  Dimension  |  Weight  |  Rationales
+  |  Sector fit  |  0.4
+  |  Geography fit  |  0.25
+  |  Stage fit  |  0.1  |  A bit redundant with financials, plus a fund can always take non-leading investor role
+  |  Financial traction fit - ARR  |  0.25  |  Very important - clearest proof the product is going to be successful
+  |  B) Deal Breaker (yes/ no output + flag which one is the deal breaker)
+  |  Deal breaker if -->  |    |  Details
+  |  1) No pre-product, pre-revenue companies  |    |  Flag if: no ARR mentioned, revenue described as "pilots", "POCs", "LOIs", or "in discussions" with no signed contracts
+  |  2) Hardware business models (capital intensive!)  |    |  Flag if: gross margin likely <40% based on business model, physical product delivery required, manufacturing mentioned, COGS-heavy model
+  |  3) No D2C, consumer products, E-commerce (very competitive market, hard to differentiate)  |    |  Flag if: ICP (ideal customer profile) is individual consumers, B2C pricing model (per user <$50/month), marketplace with consumer supply side
+  |  C) Bonus Point (up to 3 points + flag which one gives bonus point)
+  |  Criteria  |    |  Details
+  |  Plus 1 point if -> Prior renowned VC & institutional backers (e.g Sequoia, Y-Comb, A16Z etc)  |    |  Global: Sequoia, a16z, Accel, Y Combinator, Benchmark, Bessemer, GV, Index
+Regional: Temasek, East Ventures, Matrix Partners etc
+  |  Plus 1 point if -> Clear path to profitability with current round
+  |  Plus 1 point if -> Repeat founders/ serial entrepreneurs
+  |  D) Summary -> text output, a few lines for each bucket
+  |  give a few liners for each of the section below
+  |  Business: what's the product? what's the problem that it solves? what's the value proposition?
+  |  Market: TAM? market growth? who are the customers and competitions? is there any market tailwind/ headwind (e.g from government)?
+  |  Unit Econ: pricing (for different tier, if applicable), business model (eg one-time license vs recurring subscription), gross margin, CAC, LTV
+  |  Traction: ARR, # of customers, historical growth, growth projections , potential leads
+  |  Product / differentiation: what's the moat that makes the business defensible? (e.g IP, superior distribution network, superior efficiency vs any other existing solutions etc)
+  |  Team quality: founder-market fit, co-founding team expertise, repeat founder or not
+  |  Top 3 risks identified from deck + verification: e.g. (1) TAM claim unverified, (2) single customer concentration — top customer = 60% ARR, (3) no CTO listed in founding team, or no BD head who can lead GTM
+  |  E) Next Steps --> text output
+  |  if Dealbreaker BUT "Thesis Fit Score"** is high -> VC wants to keep this in their database for future opportunities?
+  |  if NOT dealbreaker and above certain score threshold --> then continue with information gathering/ founder' call. There might be some questions to Founder if
+- any mising info in Core Thesis Fit assessment
+- any follow-up questions from pitchdeck/ summary, e.g. mismatched between claimed market size vs desk research data
+  |  NOTE : How to Handle missing info?
+  |  1) Score what is known + reduce confidence
+  |  2) Example:
+
+- deck says ARR = $300k
+- no growth chart shown
+- then you can score ARR part, but keep growth plausibility uncertain
+  |  To clarify
+  |  1) What does intermediate anchors mean? is it just using 0/25/50/75/100 as classification instead of anything between 0 - 100? and in fact this is regulated by MCDA?
+  |  2) For Geo fit - how is 25% different from 75%?
+  |  3) Growth trend is often missing in pitch deck - what to do if any incomplete information?
+  |  4) Can we separate ARR and ARR growth? so no need to make 100% ARR score to be at USD 1mn or above - if there's clear path within 12 months it will be captured anw in ARR growth?
+  |  5) Can help elaborate more on how to build Attractiveness Score, Risk Flags, and Confidence score?
+  |  1) why default score for missing data? why not flag in Confidence Level?
