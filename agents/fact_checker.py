@@ -63,6 +63,7 @@ def run(
 
     response = anthropic_client.messages.create(
         model="claude-sonnet-4-6",
+        temperature=0,
         max_tokens=4096,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_content}],

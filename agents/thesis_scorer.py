@@ -36,6 +36,7 @@ def run(
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
+        temperature=0,
         max_tokens=2048,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_content}],

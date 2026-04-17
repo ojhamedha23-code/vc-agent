@@ -89,6 +89,7 @@ def run(
 
     response = client.messages.create(
         model="claude-opus-4-6",
+        temperature=0,
         max_tokens=4096,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_content}],
