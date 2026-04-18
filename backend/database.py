@@ -38,15 +38,16 @@ if DATABASE_URL.startswith("postgresql"):
     UPSERT = """
         INSERT INTO deals
         (id, company, sector, stage, hq, fit_pct, action, confidence,
-         bonus_pts, deck_name, created_at, claims_json, fact_json,
+         bonus_pts, deck_name, created_at, file_hash, claims_json, fact_json,
          thesis_json, memo_json, search_logs, slide_texts, errors_json)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (id) DO UPDATE SET
           company=EXCLUDED.company, sector=EXCLUDED.sector,
           stage=EXCLUDED.stage, hq=EXCLUDED.hq,
           fit_pct=EXCLUDED.fit_pct, action=EXCLUDED.action,
           confidence=EXCLUDED.confidence, bonus_pts=EXCLUDED.bonus_pts,
           deck_name=EXCLUDED.deck_name, created_at=EXCLUDED.created_at,
+          file_hash=EXCLUDED.file_hash,
           claims_json=EXCLUDED.claims_json, fact_json=EXCLUDED.fact_json,
           thesis_json=EXCLUDED.thesis_json, memo_json=EXCLUDED.memo_json,
           search_logs=EXCLUDED.search_logs, slide_texts=EXCLUDED.slide_texts,
@@ -76,9 +77,9 @@ else:
     UPSERT = """
         INSERT OR REPLACE INTO deals
         (id, company, sector, stage, hq, fit_pct, action, confidence,
-         bonus_pts, deck_name, created_at, claims_json, fact_json,
+         bonus_pts, deck_name, created_at, file_hash, claims_json, fact_json,
          thesis_json, memo_json, search_logs, slide_texts, errors_json)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """
     USE_PG = False
 
@@ -109,6 +110,7 @@ def init_db():
                 bonus_pts   INTEGER DEFAULT 0,
                 deck_name   TEXT,
                 created_at  TEXT,
+                file_hash   TEXT,
                 claims_json TEXT,
                 fact_json   TEXT,
                 thesis_json TEXT,
@@ -118,9 +120,25 @@ def init_db():
                 errors_json TEXT
             )
         """)
+        # Add file_hash column if it doesn't exist (for existing DBs)
+        try:
+            cur.execute("ALTER TABLE deals ADD COLUMN file_hash TEXT")
+        except Exception:
+            pass
 
 
-def save_deal(deal_id: str, deck_name: str, result) -> dict:
+def get_deal_by_hash(file_hash: str) -> Optional[dict]:
+    """Return existing deal if same file was already screened."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        if USE_PG:
+            cur.execute("SELECT * FROM deals WHERE file_hash = %s LIMIT 1", (file_hash,))
+        else:
+            cur.execute("SELECT * FROM deals WHERE file_hash = ? LIMIT 1", (file_hash,))
+        return _one(cur)
+
+
+def save_deal(deal_id: str, deck_name: str, result, file_hash: str = None) -> dict:
     claims  = result.claims
     thesis  = result.thesis_result
     memo    = result.memo
@@ -137,6 +155,7 @@ def save_deal(deal_id: str, deck_name: str, result) -> dict:
         thesis.bonus_points.total() if thesis else 0,
         deck_name,
         datetime.utcnow().isoformat(),
+        file_hash,
         claims.model_dump_json() if claims else None,
         result.fact_result.model_dump_json() if result.fact_result else None,
         thesis.model_dump_json() if thesis else None,

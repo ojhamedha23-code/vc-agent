@@ -34,7 +34,7 @@ from fastapi.responses import StreamingResponse
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from database import delete_deal, get_all_deals, get_deal, init_db, save_deal
+from database import delete_deal, get_all_deals, get_deal, get_deal_by_hash, init_db, save_deal
 
 THESIS_TEXT_PATH = Path(__file__).parent.parent / "config" / "thesis_text.txt"
 
@@ -209,7 +209,7 @@ def _run_pipeline_sync(job_id: str, mode: str, **kwargs):
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-        deal_id = save_deal(job_id, kwargs.get("deck_name", "unknown"), result)
+        deal_id = save_deal(job_id, kwargs.get("deck_name", "unknown"), result, file_hash=kwargs.get("file_hash"))
         _result_store[job_id] = {"status": "done", "deal_id": job_id}
         _progress_store[job_id].append("__DONE__")
     except Exception as e:
@@ -219,28 +219,43 @@ def _run_pipeline_sync(job_id: str, mode: str, **kwargs):
 
 @app.post("/api/analyze/file")
 async def analyze_file(file: UploadFile = File(...)):
+    import hashlib
+    import concurrent.futures
+
     if not _load_thesis():
         raise HTTPException(status_code=400, detail="No thesis set. Save your fund thesis first.")
 
-    job_id = str(uuid.uuid4())
     suffix = Path(file.filename).suffix.lower()
-
     if suffix not in (".pdf", ".pptx"):
         raise HTTPException(status_code=400, detail="Only PDF and PPTX files supported.")
 
+    content = await file.read()
+
+    # ── Deduplication: same file = same result ────────────────────────────────
+    file_hash = hashlib.md5(content).hexdigest()
+    existing = get_deal_by_hash(file_hash)
+    if existing:
+        # Return existing deal immediately — no re-run
+        job_id = existing["id"]
+        _progress_store[job_id] = []
+        _result_store[job_id] = {"status": "done", "deal_id": job_id}
+        _progress_store[job_id].append("__DONE__")
+        return {"job_id": job_id}
+
+    job_id = str(uuid.uuid4())
+
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(await file.read())
+        tmp.write(content)
         tmp_path = tmp.name
 
     deck_name = Path(file.filename).stem
     mode = "pdf" if suffix == ".pdf" else "pptx"
 
-    import concurrent.futures
     loop = asyncio.get_event_loop()
     executor = concurrent.futures.ThreadPoolExecutor()
 
     def _run():
-        _run_pipeline_sync(job_id, mode, path=tmp_path, deck_name=deck_name)
+        _run_pipeline_sync(job_id, mode, path=tmp_path, deck_name=deck_name, file_hash=file_hash)
         try:
             os.unlink(tmp_path)
         except Exception:
