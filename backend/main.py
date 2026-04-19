@@ -37,6 +37,48 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from database import delete_deal, get_all_deals, get_deal, get_deal_by_hash, init_db, save_deal
 
 THESIS_TEXT_PATH = Path(__file__).parent.parent / "config" / "thesis_text.txt"
+NOTIFY_EMAIL_PATH = Path(__file__).parent.parent / "config" / "notify_email.txt"
+
+
+def _get_notify_email() -> str:
+    if NOTIFY_EMAIL_PATH.exists():
+        return NOTIFY_EMAIL_PATH.read_text().strip()
+    return os.getenv("NOTIFY_EMAIL", "")
+
+
+def _send_notification_email(company: str, fit_pct: float, action: str, deal_id: str):
+    """Send memo-ready email via Resend. Silently no-ops if not configured."""
+    api_key = os.getenv("RESEND_API_KEY", "")
+    to_email = _get_notify_email()
+    if not api_key or not to_email:
+        return
+    try:
+        import resend
+        resend.api_key = api_key
+        action_color = {"REVIEW": "#22c55e", "PASS": "#ef4444", "ARCHIVE": "#f59e0b"}.get(action, "#6b7280")
+        resend.Emails.send({
+            "from": "InsidersDen <onboarding@resend.dev>",
+            "to": [to_email],
+            "subject": f"Memo ready: {company} — {action} ({fit_pct:.0f}% fit)",
+            "html": f"""
+            <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px">
+              <h2 style="margin:0 0 8px">📄 Memo ready: {company}</h2>
+              <p style="color:#6b7280;margin:0 0 20px">Your due diligence memo has been generated.</p>
+              <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                <tr><td style="padding:8px;color:#6b7280">Thesis Fit</td><td style="padding:8px;font-weight:600">{fit_pct:.1f}%</td></tr>
+                <tr style="background:#f9fafb"><td style="padding:8px;color:#6b7280">Action</td>
+                  <td style="padding:8px"><span style="background:{action_color};color:#fff;padding:2px 10px;border-radius:99px;font-size:13px;font-weight:600">{action}</span></td></tr>
+              </table>
+              <a href="https://insidersden.vercel.app/deals/{deal_id}"
+                 style="display:inline-block;background:#3b82f6;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">
+                View Full Memo →
+              </a>
+              <p style="color:#9ca3af;font-size:12px;margin-top:24px">InsidersDen · AI-powered VC due diligence</p>
+            </div>
+            """,
+        })
+    except Exception as e:
+        print(f"[email] Failed to send notification: {e}")
 
 app = FastAPI(title="VC Due Diligence Agent API", version="1.0.0")
 
@@ -123,6 +165,21 @@ async def upload_thesis_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Could not extract any text from the file.")
 
     return {"text": thesis_text}
+
+
+# ── Notify Email ─────────────────────────────────────────────────────────────
+
+@app.get("/api/notify-email")
+def get_notify_email():
+    return {"email": _get_notify_email()}
+
+
+@app.post("/api/notify-email")
+async def save_notify_email(payload: dict):
+    email = payload.get("email", "").strip()
+    NOTIFY_EMAIL_PATH.parent.mkdir(exist_ok=True)
+    NOTIFY_EMAIL_PATH.write_text(email)
+    return {"status": "saved"}
 
 
 # ── Deals ─────────────────────────────────────────────────────────────────────
@@ -212,6 +269,14 @@ def _run_pipeline_sync(job_id: str, mode: str, **kwargs):
         deal_id = save_deal(job_id, kwargs.get("deck_name", "unknown"), result, file_hash=kwargs.get("file_hash"))
         _result_store[job_id] = {"status": "done", "deal_id": job_id}
         _progress_store[job_id].append("__DONE__")
+        # Send email notification
+        if result.thesis_result:
+            _send_notification_email(
+                company=result.claims.startup_name if result.claims else kwargs.get("deck_name", "Unknown"),
+                fit_pct=result.thesis_result.overall_fit,
+                action=result.thesis_result.action,
+                deal_id=job_id,
+            )
     except Exception as e:
         _result_store[job_id] = {"status": "error", "error": str(e)}
         _progress_store[job_id].append(f"__ERROR__{e}")

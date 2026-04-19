@@ -89,14 +89,16 @@ function Accordion({ title, children }: { title: string; children: React.ReactNo
 }
 
 function CredBadge({ status }: { status: string }) {
-  const map: Record<string, React.CSSProperties> = {
-    verified: { background: "rgba(16,185,129,0.12)", color: "#34d399", border: "1px solid rgba(16,185,129,0.25)" },
-    unverified: { background: "rgba(255,255,255,0.05)", color: "var(--text-2)", border: "1px solid var(--border)" },
-    contradicted: { background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" },
+  const map: Record<string, { style: React.CSSProperties; label: string }> = {
+    verified:     { style: { background: "rgba(16,185,129,0.12)",  color: "#34d399", border: "1px solid rgba(16,185,129,0.25)" }, label: "verified" },
+    contradicted: { style: { background: "rgba(239,68,68,0.12)",   color: "#f87171", border: "1px solid rgba(239,68,68,0.25)"  }, label: "contradicted" },
+    unverified:   { style: { background: "rgba(251,191,36,0.1)",   color: "#fbbf24", border: "1px solid rgba(251,191,36,0.25)" }, label: "unverified" },
+    not_found:    { style: { background: "rgba(255,255,255,0.05)", color: "var(--text-3)", border: "1px solid var(--border)"   }, label: "not found" },
   }
+  const entry = map[status] ?? map.not_found
   return (
-    <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0" style={map[status] ?? map.unverified}>
-      {status}
+    <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0" style={entry.style}>
+      {entry.label}
     </span>
   )
 }
@@ -270,10 +272,58 @@ export default function DealPage() {
           {/* ── A) Thesis Fit Score ────────────────────────────── */}
           <section id="score">
             <SectionHeader title="A — Thesis Fit Score" />
-            {m ? (
-              <div className="space-y-3">
-                <div className="memo-table" dangerouslySetInnerHTML={{ __html: m.thesis_score_table.replace(/\n/g, "<br>") }} />
-                {t?.missing_data_points && t.missing_data_points.length > 0 && (
+            {t ? (
+              <div className="space-y-4">
+                {/* Score summary row */}
+                <div className="flex items-center gap-4 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>{t.overall_fit.toFixed(1)}%</p>
+                    <p className="text-xs" style={{ color: "var(--text-3)" }}>Overall Thesis Fit</p>
+                  </div>
+                  <div className="ml-auto text-right">
+                    <p className="text-sm font-medium" style={{ color: "var(--text-2)" }}>{t.confidence} confidence</p>
+                    {t.missing_data_points?.length > 0 && (
+                      <p className="text-xs" style={{ color: "var(--text-3)" }}>{t.missing_data_points.length} data point{t.missing_data_points.length > 1 ? "s" : ""} missing</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Structured score table */}
+                <div className="memo-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Dimension</th>
+                        <th>Score</th>
+                        <th>Weight</th>
+                        <th>Weighted</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { label: "Sector Fit",        dim: t.sector_fit,      weight: 0.40 },
+                        { label: "Geography Fit",     dim: t.geography_fit,   weight: 0.25 },
+                        { label: "ARR / Traction Fit",dim: t.arr_traction_fit,weight: 0.25 },
+                        { label: "Stage Fit",         dim: t.stage_fit,       weight: 0.10 },
+                      ].map(({ label, dim, weight }) => (
+                        <tr key={label} title={dim.reasoning}>
+                          <td>{label}</td>
+                          <td className={cn("font-semibold", fitColor(dim.score))}>{dim.score}</td>
+                          <td>{(weight * 100).toFixed(0)}%</td>
+                          <td>{(dim.score * weight).toFixed(1)}</td>
+                        </tr>
+                      ))}
+                      <tr style={{ fontWeight: 700 }}>
+                        <td>OVERALL</td>
+                        <td colSpan={2}></td>
+                        <td>{t.overall_fit.toFixed(1)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Missing data */}
+                {t.missing_data_points && t.missing_data_points.length > 0 && (
                   <div className="rounded-lg px-4 py-3" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)" }}>
                     <p className="text-xs font-semibold mb-1" style={{ color: "#fbbf24" }}>Missing data flagged</p>
                     <ul className="text-xs space-y-0.5" style={{ color: "#fcd34d" }}>
@@ -337,8 +387,8 @@ export default function DealPage() {
                     { label: "Product / Differentiation", text: m.summary_product },
                     { label: "Team", text: m.summary_team },
                   ].filter(s => s.text).map(({ label, text }) => (
-                    <div key={label}>
-                      <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-3)" }}>{label}</p>
+                    <div key={label} className="rounded-lg px-4 py-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+                      <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-3)" }}>{label}</p>
                       <p className="text-sm leading-relaxed" style={{ color: "var(--text-1)" }}>{text}</p>
                     </div>
                   ))}

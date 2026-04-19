@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
-import { CheckCircle2, Loader2, Save, Info, Upload, FileSpreadsheet, FileText } from "lucide-react"
+import { CheckCircle2, Loader2, Save, Info, Upload, FileSpreadsheet, FileText, Bell } from "lucide-react"
 import { api } from "@/lib/api"
 
 const PLACEHOLDER = `Paste your fund thesis here in plain English. For example:
@@ -18,11 +18,20 @@ export default function SettingsPage() {
   const [uploadName, setUploadName] = useState("")
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Email notification state
+  const [notifyEmail, setNotifyEmail] = useState("")
+  const [savedEmail, setSavedEmail] = useState("")
+  const [savingEmail, setSavingEmail] = useState(false)
+  const [emailSuccess, setEmailSuccess] = useState(false)
+
   useEffect(() => {
     api.getThesis()
       .then(r => { setText(r.text); setSaved(r.text) })
       .catch(() => {})
       .finally(() => setLoading(false))
+    api.getNotifyEmail()
+      .then(r => { setNotifyEmail(r.email); setSavedEmail(r.email) })
+      .catch(() => {})
   }, [])
 
   async function handleSave() {
@@ -61,7 +70,20 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleSaveEmail() {
+    setSavingEmail(true)
+    try {
+      await api.saveNotifyEmail(notifyEmail.trim())
+      setSavedEmail(notifyEmail.trim())
+      setEmailSuccess(true)
+      setTimeout(() => setEmailSuccess(false), 3000)
+    } catch { /* silent */ } finally {
+      setSavingEmail(false)
+    }
+  }
+
   const isDirty = text.trim() !== saved.trim()
+  const isEmailDirty = notifyEmail.trim() !== savedEmail.trim()
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
@@ -189,6 +211,45 @@ export default function SettingsPage() {
         {isDirty && !saving && (
           <p className="text-xs ml-auto" style={{ color: "#fbbf24" }}>Unsaved changes</p>
         )}
+      </div>
+
+      {/* Email Notifications */}
+      <div className="mt-8 rounded-xl p-5" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <Bell size={15} style={{ color: "var(--text-2)" }} />
+          <p className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>Email Notifications</p>
+        </div>
+        <p className="text-xs mb-4" style={{ color: "var(--text-2)" }}>
+          Get an email when a memo finishes processing — includes company name, thesis fit score, and a direct link.
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            type="email"
+            value={notifyEmail}
+            onChange={e => setNotifyEmail(e.target.value)}
+            placeholder="analyst@fund.com"
+            className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none"
+            style={{
+              background: "var(--bg)",
+              border: "1px solid var(--border-md)",
+              color: "var(--text-1)",
+            }}
+          />
+          <button
+            onClick={handleSaveEmail}
+            disabled={savingEmail || !isEmailDirty || !notifyEmail.trim()}
+            className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-40"
+            style={{ background: "var(--accent)" }}
+          >
+            {savingEmail ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {savingEmail ? "Saving…" : "Save"}
+          </button>
+          {emailSuccess && (
+            <div className="flex items-center gap-1.5 text-sm text-emerald-400">
+              <CheckCircle2 size={14} /> Saved
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tips */}

@@ -48,6 +48,15 @@ export const api = {
       body: JSON.stringify({ url }),
     }),
 
+  // Notify email
+  getNotifyEmail: () => req<{ email: string }>("/api/notify-email"),
+  saveNotifyEmail: (email: string) =>
+    req("/api/notify-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }),
+
   // SSE progress stream
   streamProgress: (
     jobId: string,

@@ -61,7 +61,7 @@ class ClaimsJSON(BaseModel):
 class ClaimCheck(BaseModel):
     claim: str
     category: Literal["market_size", "traction", "competition", "team", "other"]
-    status: Literal["verified", "unverified", "contradicted"]
+    status: Literal["verified", "unverified", "contradicted", "not_found"]
     source: Optional[str] = None
     source_url: Optional[str] = None
     confidence: Literal["high", "medium", "low"]

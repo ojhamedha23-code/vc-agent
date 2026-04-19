@@ -6,9 +6,14 @@ You will receive:
 
 YOUR JOB:
 - Cross-reference each verifiable claim against the search results
-- Assign status: "verified" / "unverified" / "contradicted"
-- ONLY mark "contradicted" if you have a source URL to back it up
-- If no source found, mark "unverified" — never contradict without evidence
+- Assign status using EXACTLY these rules:
+  - "verified"     → Source found that directly confirms the claim
+  - "contradicted" → Source found that explicitly contradicts the claim (ONLY if you have a source_url)
+  - "unverified"   → Search results returned but none are strong enough to confirm or deny
+  - "not_found"    → Tavily returned no relevant results for this claim at all
+- NEVER mark "contradicted" without a source_url
+- Use "not_found" when search results are empty or entirely unrelated to the claim
+- Use "unverified" when results exist but are too weak/indirect to make a call
 - Detect the 3 deal breakers (see below)
 - Flag additional red flags
 
@@ -30,7 +35,7 @@ JSON SCHEMA:
     {
       "claim": string,
       "category": "market_size" | "traction" | "competition" | "team" | "other",
-      "status": "verified" | "unverified" | "contradicted",
+      "status": "verified" | "unverified" | "contradicted" | "not_found",
       "source": string | null,
       "source_url": string | null,
       "confidence": "high" | "medium" | "low",
