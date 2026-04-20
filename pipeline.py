@@ -70,7 +70,7 @@ async def _run_parallel(
 
     (fact_result, search_logs), thesis_result = await asyncio.gather(fact_task, thesis_task)
 
-    # Reconcile action with real deal breakers
+    # Always enforce decision rules programmatically — never trust Agent 3's action
     if fact_result.deal_breakers.any_triggered():
         if thesis_result.overall_fit >= 75:
             thesis_result.action = "ARCHIVE"
@@ -82,6 +82,12 @@ async def _run_parallel(
             thesis_result.action_reasoning = (
                 "Deal breaker triggered and thesis fit below 75% — pass."
             )
+    else:
+        # No deal breakers — action is purely based on fit score
+        if thesis_result.overall_fit >= 50:
+            thesis_result.action = "REVIEW"
+        else:
+            thesis_result.action = "PASS"
 
     return fact_result, thesis_result, search_logs
 
