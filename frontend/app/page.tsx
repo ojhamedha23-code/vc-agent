@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import {
   Plus, Loader2, Link2, X, FileText,
-  TrendingUp, CheckCircle2, XCircle, LayoutList, ChevronDown
+  TrendingUp, CheckCircle2, XCircle, LayoutList, ChevronDown, Trash2
 } from "lucide-react"
 import { api } from "@/lib/api"
 import { DealSummary } from "@/types"
@@ -81,6 +81,16 @@ export default function Dashboard() {
   const [stageFilter, setStageFilter] = useState("")
   const [geoFilter, setGeoFilter] = useState("")
   const [dateFilter, setDateFilter] = useState("")
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  async function handleDelete(e: React.MouseEvent, dealId: string) {
+    e.stopPropagation()
+    if (!confirm("Delete this deal? This cannot be undone.")) return
+    setDeletingId(dealId)
+    await api.deleteDeal(dealId)
+    setDeals(prev => prev.filter(d => d.id !== dealId))
+    setDeletingId(null)
+  }
 
   const load = useCallback(async () => {
     try { setDeals(await api.getDeals()) } finally { setLoading(false) }
@@ -157,17 +167,11 @@ export default function Dashboard() {
           <span key={i} className={`absolute ${pos} text-blue-400/30 text-lg select-none`}>✦</span>
         ))}
 
-        <p className="text-xs font-semibold tracking-widest mb-3" style={{ color: "var(--text-3)" }}>
-          {getDateLabel()}
-        </p>
-        <h1 className="text-4xl font-bold text-white">
-          {getGreeting()},{" "}
-          <span className="text-emerald-400">Medha!</span>{" "}👋
+        <h1 className="text-5xl font-bold text-white leading-tight tracking-tight text-center">
+          GenAI built for moving deals faster
         </h1>
-        <p className="mt-2 text-sm" style={{ color: "var(--text-2)" }}>
-          {reviewCount > 0
-            ? `${reviewCount} deal${reviewCount > 1 ? "s" : ""} waiting for your review`
-            : "No deals pending review — screen a deck to get started"}
+        <p className="mt-4 text-base leading-relaxed text-center mx-auto" style={{ color: "var(--text-2)", maxWidth: "640px" }}>
+          With Insiders Den, you can do in minutes tasks that used to take hours. Comb through more data, move on deals faster and focus on work that wins.
         </p>
       </div>
 
@@ -269,6 +273,7 @@ export default function Dashboard() {
                 <th className="text-left px-4 py-3">Thesis Fit</th>
                 <th className="text-left px-4 py-3">Action</th>
                 <th className="text-left px-4 py-3">Date</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -292,6 +297,21 @@ export default function Dashboard() {
                   <td className="px-4 py-3.5"><FitBar pct={deal.fit_pct} /></td>
                   <td className="px-4 py-3.5"><ActionBadge action={deal.action} /></td>
                   <td className="px-4 py-3.5 text-xs" style={{ color: "var(--text-3)" }}>{formatDate(deal.created_at)}</td>
+                  <td className="px-4 py-3.5 text-right">
+                    <button
+                      onClick={e => handleDelete(e, deal.id)}
+                      disabled={deletingId === deal.id}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md"
+                      style={{ color: "var(--text-3)" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "var(--text-3)")}
+                      title="Delete deal"
+                    >
+                      {deletingId === deal.id
+                        ? <Loader2 size={13} className="animate-spin" />
+                        : <Trash2 size={13} />}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
