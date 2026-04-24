@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { CheckCircle2, Loader2, Save, Info, Upload, FileSpreadsheet, FileText, Bell, Lock } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 import { useApi } from "@/hooks/useApi"
@@ -12,7 +13,13 @@ We are a Seed and Series A fund focused on B2B SaaS and enterprise software comp
 export default function SettingsPage() {
   const api = useApi()
   const { isLoaded, isSignedIn } = useAuth()
+  const router = useRouter()
   const { can, label: roleLabel } = useRole()
+
+  // Redirect unauthenticated users to sign-in
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) router.push("/sign-in")
+  }, [isLoaded, isSignedIn, router])
   const canEditThesis = can("edit_thesis")
   const [text, setText] = useState("")
   const [saved, setSaved] = useState("")

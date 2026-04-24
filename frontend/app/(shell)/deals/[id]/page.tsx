@@ -119,6 +119,12 @@ export default function DealPage() {
   const api = useApi()
   const { can } = useRole()
   const { isLoaded, isSignedIn } = useAuth()
+
+  // Redirect unauthenticated users to sign-in
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) router.push("/sign-in")
+  }, [isLoaded, isSignedIn, router])
+
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [deal, setDeal] = useState<DealDetail | null>(null)

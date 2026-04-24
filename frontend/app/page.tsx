@@ -73,6 +73,11 @@ export default function Dashboard() {
   const { can } = useRole()
   const { isLoaded, isSignedIn } = useAuth()
   const router = useRouter()
+
+  // Redirect unauthenticated users to sign-in
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) router.push("/sign-in")
+  }, [isLoaded, isSignedIn, router])
   const [deals, setDeals] = useState<DealSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
