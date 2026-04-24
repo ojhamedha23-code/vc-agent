@@ -145,6 +145,7 @@ def init_db():
             ("org_id",      "TEXT"),
             ("uploaded_by", "TEXT"),
             ("file_hash",   "TEXT"),
+            ("embedding",   "vector(1536)"),  # pgvector — requires CREATE EXTENSION vector on Supabase
         ]:
             if USE_PG:
                 cur.execute(
@@ -253,6 +254,50 @@ def delete_deal(deal_id: str, org_id: str = "default_org"):
             f"DELETE FROM deals WHERE id = {P} AND org_id = {P}",
             (deal_id, org_id),
         )
+
+
+def update_deal_embedding(deal_id: str, embedding: list) -> None:
+    """Store a pgvector embedding for a deal. No-op on SQLite."""
+    if not USE_PG:
+        return
+    vec_str = "[" + ",".join(str(v) for v in embedding) + "]"
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"UPDATE deals SET embedding = {P}::vector WHERE id = {P}",
+            (vec_str, deal_id),
+        )
+
+
+def get_similar_deals(
+    org_id: str,
+    embedding: list,
+    exclude_id: str,
+    top_k: int = 3,
+) -> list:
+    """
+    Return up to top_k past deals from the same org by cosine similarity.
+    Returns [] on SQLite or if no embeddings exist yet.
+    """
+    if not USE_PG:
+        return []
+    vec_str = "[" + ",".join(str(v) for v in embedding) + "]"
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"""
+            SELECT id, company, fit_pct, action, thesis_json, memo_json
+            FROM deals
+            WHERE org_id = {P}
+              AND id != {P}
+              AND embedding IS NOT NULL
+            ORDER BY embedding <=> {P}::vector
+            LIMIT {P}
+            """,
+            (org_id, exclude_id, vec_str, top_k),
+        )
+        cols = [d[0] for d in cur.description]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
 # ── Org settings ──────────────────────────────────────────────────────────────

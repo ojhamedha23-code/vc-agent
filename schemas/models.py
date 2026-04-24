@@ -151,6 +151,9 @@ class InvestmentMemo(BaseModel):
     founder_questions: List[str] = []
     recommended_next_step: str = ""
 
+    # Section G — RAG: similar past deals (populated when pgvector is available)
+    similar_deals: str = ""
+
     def to_markdown(self) -> str:
         lines = [
             "━" * 60,

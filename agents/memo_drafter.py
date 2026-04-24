@@ -72,10 +72,17 @@ def run(
     fact_result: FactCheckResult,
     thesis_result: ThesisFitResult,
     client: anthropic.Anthropic,
+    similar_deals_text: str = "",
 ) -> InvestmentMemo:
     score_table = _build_score_table(thesis_result)
     deal_breaker_text = _build_deal_breaker_text(fact_result.deal_breakers)
     bonus_text = _build_bonus_text(thesis_result.bonus_points)
+
+    similar_section = (
+        f"\n\n{similar_deals_text}"
+        if similar_deals_text
+        else ""
+    )
 
     user_content = (
         f"ACTION: {thesis_result.action}\n\n"
@@ -85,6 +92,7 @@ def run(
         f"PRE-BUILT SCORE TABLE (use this verbatim in thesis_score_table):\n{score_table}\n\n"
         f"PRE-BUILT DEAL BREAKER TEXT (use this verbatim in deal_breaker_status):\n{deal_breaker_text}\n\n"
         f"PRE-BUILT BONUS POINTS TEXT (use this verbatim in bonus_points_summary):\n{bonus_text}"
+        f"{similar_section}"
     )
 
     response = client.messages.create(
@@ -121,4 +129,5 @@ def run(
         reasons_to_pass=data.get("reasons_to_pass", []),
         founder_questions=data.get("founder_questions", []),
         recommended_next_step=data.get("recommended_next_step", ""),
+        similar_deals=data.get("similar_deals", ""),
     )

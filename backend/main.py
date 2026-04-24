@@ -288,13 +288,13 @@ def _run_pipeline_sync(job_id: str, mode: str, org_id: str, user_id: str, **kwar
     thesis_text = _load_thesis_for_org(org_id)
     try:
         if mode == "pdf":
-            result = run_pipeline(kwargs["path"], thesis_text, on_progress)
+            result = run_pipeline(kwargs["path"], thesis_text, on_progress, org_id=org_id, deal_id=job_id)
         elif mode == "pptx":
-            result = run_pipeline_pptx(kwargs["path"], thesis_text, on_progress)
+            result = run_pipeline_pptx(kwargs["path"], thesis_text, on_progress, org_id=org_id, deal_id=job_id)
         elif mode == "url":
-            result = run_pipeline_url(kwargs["url"], thesis_text, on_progress)
+            result = run_pipeline_url(kwargs["url"], thesis_text, on_progress, org_id=org_id, deal_id=job_id)
         elif mode == "images":
-            result = run_pipeline_images(kwargs["image_bytes"], kwargs["media_types"], thesis_text, on_progress)
+            result = run_pipeline_images(kwargs["image_bytes"], kwargs["media_types"], thesis_text, on_progress, org_id=org_id, deal_id=job_id)
         else:
             raise ValueError(f"Unknown mode: {mode}")
 

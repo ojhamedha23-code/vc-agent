@@ -98,6 +98,8 @@ def _run_core(
     anthropic_client: anthropic.Anthropic,
     tavily_client: TavilyClient,
     progress_callback: Optional[Callable],
+    org_id: Optional[str] = None,
+    deal_id: Optional[str] = None,
 ) -> PipelineResult:
     """Shared core: runs Agents 1→2+3→4, returns full PipelineResult."""
     result = PipelineResult(
@@ -134,15 +136,50 @@ def _run_core(
         _p(f"Agent 2/3 ERROR: {e}")
         return result
 
+    # RAG: retrieve similar past deals before Agent 4 (PG only, always non-fatal)
+    similar_deals_text = ""
+    current_embedding = None
+    if org_id and deal_id:
+        try:
+            from database import USE_PG, get_similar_deals, update_deal_embedding
+            if USE_PG:
+                _p("RAG: Generating embedding for similarity search...")
+                from rag import build_deal_text, generate_embedding, format_similar_deals_for_prompt
+                deal_text = build_deal_text(
+                    result.claims.model_dump() if result.claims else {},
+                    result.thesis_result.model_dump() if result.thesis_result else {},
+                )
+                current_embedding = generate_embedding(deal_text)
+                if current_embedding:
+                    similar = get_similar_deals(org_id, current_embedding, exclude_id=deal_id)
+                    if similar:
+                        similar_deals_text = format_similar_deals_for_prompt(similar)
+                        _p(f"RAG: Found {len(similar)} similar past deal(s)")
+                    else:
+                        _p("RAG: No similar deals yet (first deal for this org)")
+        except Exception as e:
+            _p(f"RAG WARNING (non-fatal): {e}")
+
     # Agent 4
     _p(f"Agent 4: Drafting memo (Action: {thesis_result.action})...")
     try:
         result.memo = memo_drafter.run(
-            result.claims, result.fact_result, result.thesis_result, anthropic_client
+            result.claims, result.fact_result, result.thesis_result,
+            anthropic_client, similar_deals_text=similar_deals_text,
         )
     except Exception as e:
         result.errors["agent_4"] = str(e)
         _p(f"Agent 4 ERROR: {e}")
+
+    # Store embedding after memo is drafted (so this deal isn't its own similar match)
+    if current_embedding and deal_id and org_id:
+        try:
+            from database import USE_PG, update_deal_embedding
+            if USE_PG:
+                update_deal_embedding(deal_id, current_embedding)
+                _p("RAG: Embedding stored for future similarity search")
+        except Exception as e:
+            _p(f"RAG embedding store WARNING (non-fatal): {e}")
 
     _p("Done.")
     return result
@@ -154,6 +191,8 @@ def run_pipeline(
     pdf_path: str,
     thesis_text: str = "",
     progress_callback: Optional[Callable] = None,
+    org_id: Optional[str] = None,
+    deal_id: Optional[str] = None,
 ) -> PipelineResult:
     def _p(msg):
         if progress_callback: progress_callback(msg)
@@ -162,13 +201,15 @@ def run_pipeline(
         thesis_text = load_thesis_text()
     _p("Parsing pitch deck PDF...")
     slides = parse_deck(pdf_path, anthropic_client)
-    return _run_core(slides, thesis_text, anthropic_client, tavily_client, progress_callback)
+    return _run_core(slides, thesis_text, anthropic_client, tavily_client, progress_callback, org_id, deal_id)
 
 
 def run_pipeline_pptx(
     pptx_path: str,
     thesis_text: str = "",
     progress_callback: Optional[Callable] = None,
+    org_id: Optional[str] = None,
+    deal_id: Optional[str] = None,
 ) -> PipelineResult:
     def _p(msg):
         if progress_callback: progress_callback(msg)
@@ -177,13 +218,15 @@ def run_pipeline_pptx(
         thesis_text = load_thesis_text()
     _p("Parsing PPTX pitch deck...")
     slides = parse_from_pptx(pptx_path, anthropic_client)
-    return _run_core(slides, thesis_text, anthropic_client, tavily_client, progress_callback)
+    return _run_core(slides, thesis_text, anthropic_client, tavily_client, progress_callback, org_id, deal_id)
 
 
 def run_pipeline_url(
     pdf_url: str,
     thesis_text: str = "",
     progress_callback: Optional[Callable] = None,
+    org_id: Optional[str] = None,
+    deal_id: Optional[str] = None,
 ) -> PipelineResult:
     def _p(msg):
         if progress_callback: progress_callback(msg)
@@ -192,7 +235,7 @@ def run_pipeline_url(
         thesis_text = load_thesis_text()
     _p("Downloading PDF from URL...")
     slides = parse_from_url(pdf_url, anthropic_client)
-    return _run_core(slides, thesis_text, anthropic_client, tavily_client, progress_callback)
+    return _run_core(slides, thesis_text, anthropic_client, tavily_client, progress_callback, org_id, deal_id)
 
 
 def run_pipeline_images(
@@ -200,6 +243,8 @@ def run_pipeline_images(
     media_types: List[str],
     thesis_text: str = "",
     progress_callback: Optional[Callable] = None,
+    org_id: Optional[str] = None,
+    deal_id: Optional[str] = None,
 ) -> PipelineResult:
     def _p(msg):
         if progress_callback: progress_callback(msg)
@@ -208,4 +253,4 @@ def run_pipeline_images(
         thesis_text = load_thesis_text()
     _p(f"Processing {len(image_bytes_list)} slide image(s) via Claude vision...")
     slides = parse_from_images(image_bytes_list, anthropic_client, media_types)
-    return _run_core(slides, thesis_text, anthropic_client, tavily_client, progress_callback)
+    return _run_core(slides, thesis_text, anthropic_client, tavily_client, progress_callback, org_id, deal_id)
