@@ -134,15 +134,18 @@ def verify_token(
 def require_org(payload: dict) -> str:
     """
     Extract org_id from JWT payload.
-    Raises HTTP 403 if the user has no active organization.
+    Falls back to the user's sub (user ID) as the tenant key when no org
+    is active — this lets solo users work without org setup, and org members
+    share data when org_id is present.
     """
     org_id = payload.get("org_id")
-    if not org_id:
-        raise HTTPException(
-            status_code=403,
-            detail="No organization selected. Switch to an org in the app, then retry.",
-        )
-    return org_id
+    if org_id:
+        return org_id
+    # Fallback: scope to the individual user
+    sub = payload.get("sub")
+    if sub:
+        return f"user_{sub}"
+    raise HTTPException(status_code=401, detail="Not authenticated")
 
 
 _VALID_ROLES = {"analyst", "senior_analyst", "partner", "admin"}
