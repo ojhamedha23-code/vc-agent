@@ -1,11 +1,13 @@
 "use client"
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@clerk/nextjs"
 import {
   Plus, Loader2, Link2, X, FileText,
   TrendingUp, CheckCircle2, XCircle, LayoutList, ChevronDown, Trash2
 } from "lucide-react"
-import { api } from "@/lib/api"
+import { useApi } from "@/hooks/useApi"
+import { useRole } from "@/hooks/useRole"
 import { DealSummary } from "@/types"
 import { ActionBadge } from "@/components/ActionBadge"
 import { FitBar } from "@/components/FitBar"
@@ -67,6 +69,9 @@ function SelectFilter({ label, value, options, onChange }: {
 }
 
 export default function Dashboard() {
+  const api = useApi()
+  const { can } = useRole()
+  const { isLoaded, isSignedIn } = useAuth()
   const router = useRouter()
   const [deals, setDeals] = useState<DealSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -94,9 +99,11 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     try { setDeals(await api.getDeals()) } finally { setLoading(false) }
-  }, [])
+  }, [api])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (isLoaded && isSignedIn) load()
+  }, [isLoaded, isSignedIn, load])
 
   const stages = useMemo(() =>
     [...new Set(deals.map(d => d.stage).filter(Boolean) as string[])].sort(), [deals])
@@ -298,19 +305,21 @@ export default function Dashboard() {
                   <td className="px-4 py-3.5"><ActionBadge action={deal.action} /></td>
                   <td className="px-4 py-3.5 text-xs" style={{ color: "var(--text-3)" }}>{formatDate(deal.created_at)}</td>
                   <td className="px-4 py-3.5 text-right">
-                    <button
-                      onClick={e => handleDelete(e, deal.id)}
-                      disabled={deletingId === deal.id}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md"
-                      style={{ color: "var(--text-3)" }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
-                      onMouseLeave={e => (e.currentTarget.style.color = "var(--text-3)")}
-                      title="Delete deal"
-                    >
-                      {deletingId === deal.id
-                        ? <Loader2 size={13} className="animate-spin" />
-                        : <Trash2 size={13} />}
-                    </button>
+                    {can("delete") && (
+                      <button
+                        onClick={e => handleDelete(e, deal.id)}
+                        disabled={deletingId === deal.id}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md"
+                        style={{ color: "var(--text-3)" }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "var(--text-3)")}
+                        title="Delete deal"
+                      >
+                        {deletingId === deal.id
+                          ? <Loader2 size={13} className="animate-spin" />
+                          : <Trash2 size={13} />}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -1,11 +1,13 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { useAuth } from "@clerk/nextjs"
 import {
   ArrowLeft, CheckCircle2, XCircle, AlertCircle,
   ChevronDown, ChevronUp, Loader2, ExternalLink, Trash2, AlertTriangle
 } from "lucide-react"
-import { api } from "@/lib/api"
+import { useApi } from "@/hooks/useApi"
+import { useRole } from "@/hooks/useRole"
 import { DealDetail, DimensionScore } from "@/types"
 import { ScoreRing } from "@/components/ScoreRing"
 import { ActionBadge } from "@/components/ActionBadge"
@@ -114,6 +116,9 @@ function SectionHeader({ title }: { title: string }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function DealPage() {
+  const api = useApi()
+  const { can } = useRole()
+  const { isLoaded, isSignedIn } = useAuth()
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [deal, setDeal] = useState<DealDetail | null>(null)
@@ -123,8 +128,10 @@ export default function DealPage() {
   const rightPanelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    api.getDeal(id).then(setDeal).finally(() => setLoading(false))
-  }, [id])
+    if (isLoaded && isSignedIn) {
+      api.getDeal(id).then(setDeal).finally(() => setLoading(false))
+    }
+  }, [id, isLoaded, isSignedIn])
 
   // Track active section on scroll
   useEffect(() => {
@@ -242,19 +249,21 @@ export default function DealPage() {
           {deal.hq && <div className="flex justify-between text-xs"><span style={{ color: "var(--text-3)" }}>HQ</span><span style={{ color: "var(--text-1)" }} className="font-medium">{deal.hq}</span></div>}
         </div>
 
-        {/* Delete */}
-        <div className="px-4 py-3 mt-auto" style={{ borderTop: "1px solid var(--border)" }}>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="flex items-center gap-1.5 text-xs transition-colors"
-            style={{ color: "var(--text-3)" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
-            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-3)")}
-          >
-            <Trash2 size={12} /> Delete deal
-          </button>
-        </div>
+        {/* Delete — only for Senior Analyst, Partner, Admin */}
+        {can("delete") && (
+          <div className="px-4 py-3 mt-auto" style={{ borderTop: "1px solid var(--border)" }}>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-1.5 text-xs transition-colors"
+              style={{ color: "var(--text-3)" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--text-3)")}
+            >
+              <Trash2 size={12} /> Delete deal
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Right panel ───────────────────────────────────────── */}

@@ -1,13 +1,19 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
-import { CheckCircle2, Loader2, Save, Info, Upload, FileSpreadsheet, FileText, Bell } from "lucide-react"
-import { api } from "@/lib/api"
+import { CheckCircle2, Loader2, Save, Info, Upload, FileSpreadsheet, FileText, Bell, Lock } from "lucide-react"
+import { useAuth } from "@clerk/nextjs"
+import { useApi } from "@/hooks/useApi"
+import { useRole } from "@/hooks/useRole"
 
 const PLACEHOLDER = `Paste your fund thesis here in plain English. For example:
 
 We are a Seed and Series A fund focused on B2B SaaS and enterprise software companies based in Southeast Asia (Singapore, Indonesia, Vietnam, Malaysia, Philippines). We write initial checks of $500K–$2M and target companies with at least $100K ARR showing strong month-over-month growth. We do not invest in consumer, e-commerce, D2C, or hardware-heavy businesses. We value repeat founders with domain expertise, and strong preference for teams with prior exits or top-tier institutional co-investors.`
 
 export default function SettingsPage() {
+  const api = useApi()
+  const { isLoaded, isSignedIn } = useAuth()
+  const { can, label: roleLabel } = useRole()
+  const canEditThesis = can("edit_thesis")
   const [text, setText] = useState("")
   const [saved, setSaved] = useState("")
   const [saving, setSaving] = useState(false)
@@ -25,6 +31,7 @@ export default function SettingsPage() {
   const [emailSuccess, setEmailSuccess] = useState(false)
 
   useEffect(() => {
+    if (!isLoaded || !isSignedIn) return
     api.getThesis()
       .then(r => { setText(r.text); setSaved(r.text) })
       .catch(() => {})
@@ -32,7 +39,7 @@ export default function SettingsPage() {
     api.getNotifyEmail()
       .then(r => { setNotifyEmail(r.email); setSavedEmail(r.email) })
       .catch(() => {})
-  }, [])
+  }, [isLoaded, isSignedIn])
 
   async function handleSave() {
     if (!text.trim()) return
@@ -168,13 +175,15 @@ export default function SettingsPage() {
         ) : (
           <textarea
             value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder={PLACEHOLDER}
+            onChange={e => canEditThesis && setText(e.target.value)}
+            placeholder={canEditThesis ? PLACEHOLDER : `Thesis editing requires Partner or Admin role. You are logged in as ${roleLabel}.`}
             rows={20}
+            readOnly={!canEditThesis}
             className="w-full px-5 py-4 text-sm leading-relaxed resize-none focus:outline-none font-mono"
             style={{
               background: "var(--bg-card)",
-              color: "var(--text-1)",
+              color: canEditThesis ? "var(--text-1)" : "var(--text-3)",
+              cursor: canEditThesis ? "text" : "not-allowed",
             }}
             spellCheck={false}
           />
@@ -190,15 +199,21 @@ export default function SettingsPage() {
 
       {/* Save row */}
       <div className="flex items-center gap-3 mt-4">
-        <button
-          onClick={handleSave}
-          disabled={saving || !isDirty || !text.trim()}
-          className="flex items-center gap-2 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors disabled:opacity-40"
-          style={{ background: "var(--accent)" }}
-        >
-          {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-          {saving ? "Saving…" : "Save Thesis"}
-        </button>
+        {canEditThesis ? (
+          <button
+            onClick={handleSave}
+            disabled={saving || !isDirty || !text.trim()}
+            className="flex items-center gap-2 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors disabled:opacity-40"
+            style={{ background: "var(--accent)" }}
+          >
+            {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+            {saving ? "Saving…" : "Save Thesis"}
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 text-sm px-4 py-2.5 rounded-lg" style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-3)" }}>
+            <Lock size={13} /> Partner or Admin role required to edit
+          </div>
+        )}
 
         {success && (
           <div className="flex items-center gap-1.5 text-sm text-emerald-400">
