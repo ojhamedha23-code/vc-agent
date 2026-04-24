@@ -138,16 +138,23 @@ def init_db():
             )
         """)
 
-        # Migrate existing DBs — add new columns if absent
+        # Migrate existing DBs — add new columns if absent.
+        # PostgreSQL: use ADD COLUMN IF NOT EXISTS (avoids transaction abort).
+        # SQLite: doesn't support IF NOT EXISTS, so catch the error instead.
         for col, definition in [
             ("org_id",      "TEXT"),
             ("uploaded_by", "TEXT"),
             ("file_hash",   "TEXT"),
         ]:
-            try:
-                cur.execute(f"ALTER TABLE deals ADD COLUMN {col} {definition}")
-            except Exception:
-                pass  # column already exists
+            if USE_PG:
+                cur.execute(
+                    f"ALTER TABLE deals ADD COLUMN IF NOT EXISTS {col} {definition}"
+                )
+            else:
+                try:
+                    cur.execute(f"ALTER TABLE deals ADD COLUMN {col} {definition}")
+                except Exception:
+                    pass  # column already exists in SQLite
 
         # ── org_settings table ────────────────────────────────────────────────
         cur.execute("""
