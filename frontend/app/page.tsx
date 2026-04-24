@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@clerk/nextjs"
+import { useAuth, useOrganization, OrganizationSwitcher } from "@clerk/nextjs"
 import {
   Plus, Loader2, Link2, X, FileText,
   TrendingUp, CheckCircle2, XCircle, LayoutList, ChevronDown, Trash2
@@ -72,6 +72,7 @@ export default function Dashboard() {
   const api = useApi()
   const { can } = useRole()
   const { isLoaded, isSignedIn } = useAuth()
+  const { organization, isLoaded: orgLoaded } = useOrganization()
   const router = useRouter()
 
   // Redirect unauthenticated users to sign-in
@@ -163,6 +164,44 @@ export default function Dashboard() {
       setError(e instanceof Error ? e.message : "Failed to start analysis")
       setRunning(false)
     }
+  }
+
+  // Show org selector if no org is active yet
+  if (isLoaded && isSignedIn && orgLoaded && !organization) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-sm mx-auto px-6">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto" style={{ background: "rgba(59,130,246,0.15)" }}>
+            <LayoutList size={24} className="text-blue-400" />
+          </div>
+          <h2 className="text-xl font-bold" style={{ color: "var(--text-1)" }}>Select your organization</h2>
+          <p className="text-sm" style={{ color: "var(--text-2)" }}>
+            Switch to your organization to access your team&apos;s deals.
+          </p>
+          <div className="flex justify-center pt-2">
+            <OrganizationSwitcher
+              hidePersonal
+              afterSelectOrganizationUrl="/"
+              appearance={{
+                elements: {
+                  rootBox: { display: "flex", alignItems: "center" },
+                  organizationSwitcherTrigger: {
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid var(--border)",
+                    background: "var(--accent)",
+                    color: "#fff",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    gap: "8px",
+                  },
+                },
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
