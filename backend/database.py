@@ -145,7 +145,6 @@ def init_db():
             ("org_id",      "TEXT"),
             ("uploaded_by", "TEXT"),
             ("file_hash",   "TEXT"),
-            ("embedding",   "vector(1536)"),  # pgvector — requires CREATE EXTENSION vector on Supabase
         ]:
             if USE_PG:
                 cur.execute(
@@ -156,6 +155,21 @@ def init_db():
                     cur.execute(f"ALTER TABLE deals ADD COLUMN {col} {definition}")
                 except Exception:
                     pass  # column already exists in SQLite
+
+        # pgvector embedding column — only added if CREATE EXTENSION vector has been
+        # run on Supabase first. Wrapped separately so a missing extension never
+        # prevents the backend from starting.
+        if USE_PG:
+            try:
+                cur.execute(
+                    "ALTER TABLE deals ADD COLUMN IF NOT EXISTS embedding vector(1536)"
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "pgvector not available — RAG embeddings disabled. "
+                    "Run CREATE EXTENSION vector in Supabase to enable. Error: %s", e
+                )
 
         # ── org_settings table ────────────────────────────────────────────────
         cur.execute("""
