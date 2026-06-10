@@ -23,8 +23,9 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-OPENAI_API_KEY  = os.getenv("OPENAI_API_KEY", "")
-EMBEDDING_MODEL = "text-embedding-3-small"
+VOYAGE_API_KEY  = os.getenv("VOYAGE_API_KEY", "")
+EMBEDDING_MODEL = "voyage-3"
+EMBEDDING_DIMS  = 1024
 
 
 # ── Text builder ──────────────────────────────────────────────────────────────
@@ -78,17 +79,17 @@ def build_deal_text(claims: dict, thesis: dict) -> str:
 # ── Embedding generation ──────────────────────────────────────────────────────
 
 def generate_embedding(text: str) -> Optional[list[float]]:
-    """Call OpenAI text-embedding-3-small. Returns None on any failure."""
-    if not OPENAI_API_KEY:
-        logger.warning("OPENAI_API_KEY not set — skipping RAG embedding")
+    """Call Voyage AI voyage-3 embedding model. Returns None on any failure."""
+    if not VOYAGE_API_KEY:
+        logger.warning("VOYAGE_API_KEY not set — skipping RAG embedding")
         return None
     if not text.strip():
         return None
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        response = client.embeddings.create(model=EMBEDDING_MODEL, input=text)
-        return response.data[0].embedding
+        import voyageai
+        client = voyageai.Client(api_key=VOYAGE_API_KEY)
+        result = client.embed([text], model=EMBEDDING_MODEL)
+        return result.embeddings[0]
     except Exception as exc:
         logger.warning("Embedding generation failed (non-fatal): %s", exc)
         return None

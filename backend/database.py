@@ -162,7 +162,7 @@ def init_db():
         if USE_PG:
             try:
                 cur.execute(
-                    "ALTER TABLE deals ADD COLUMN IF NOT EXISTS embedding vector(1536)"
+                    "ALTER TABLE deals ADD COLUMN IF NOT EXISTS embedding vector(1024)"
                 )
             except Exception as e:
                 import logging
